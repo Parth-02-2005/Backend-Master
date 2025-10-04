@@ -2,8 +2,8 @@ import express from 'express';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
 
+
 const app = express();
-const PORT = process.env.PORT || 3000;
 
 app.use(cors({
   origin: process.env.CORS_ORIGIN,
@@ -14,4 +14,14 @@ app.use(express.json({ limit: '10mb' })); // middleware to parse JSON bodies
 app.use(express.urlencoded({ extended: true, limit: '10mb' })); // middleware to parse URL-encoded bodies
 app.use(express.static('public')); // middleware to serve static files from the 'public' directory
 app.use(cookieParser()); // middleware to parse cookies
+
+// routes import
+import userRoutes from './routes/user.routes.js';
+
+
+// routes decelaration
+app.use('/api/v1/users', userRoutes);
+
+
+
 export default app; // export the app for use in other modules

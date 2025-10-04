@@ -1,7 +1,7 @@
 import dotenv from "dotenv";
 dotenv.config();
-import { connectDB } from "./db/db";
-import app from "./app";
+import { connectDB } from "./src/db/db.js";
+import app from "./src/app.js";
 
 connectDB()
 .then(() => {
@@ -30,3 +30,4 @@ connectDB()
 //     console.error("Error connecting to MongoDB:", error);
 //   }
 // }
+
