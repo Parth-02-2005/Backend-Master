@@ -16,7 +16,7 @@ const registerUser = asyncHandler( async (req, res) => {
     }
     
     // Check if user already exists in DB
-    const existedUser = User.findOne(
+    const existedUser = await User.findOne(
         { $or: [ { email }, { username } ] }
     );
 
@@ -27,10 +27,10 @@ const registerUser = asyncHandler( async (req, res) => {
 
     // Check for images, avatars upload to cloudinary
     const avatarLocalPath = req.files?.avatar[0]?.path;
-    console.log(req.files);
+    // console.log("multer req.files", req.files);
 
-    const coverImageLocalPath = req.files?.coverImage[0]?.path;
-    console.log(coverImageLocalPath);
+    const coverImageLocalPath = req.files?.coverImage?.[0]?.path;
+    // console.log(coverImageLocalPath);
 
     if(!avatarLocalPath) {
         throw new apiError(400, "Avatar file is required");
@@ -60,7 +60,13 @@ const registerUser = asyncHandler( async (req, res) => {
     }
 
     // check if user created successfully and send response
-    return apiResponse(200, CheckUserCreated, "User registered successfully");
+    return res.status(201).json(
+        new apiResponse(
+            201,
+            CheckUserCreated,
+            "User created successfully"
+        )
+    );
 
 })
 
