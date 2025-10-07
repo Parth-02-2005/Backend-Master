@@ -70,4 +70,57 @@ const registerUser = asyncHandler( async (req, res) => {
 
 })
 
-export { registerUser }; // named export shorthand
+const loginUser = asyncHandler( async (req, res) => {
+    const { email, username, password } = req.body;
+
+    // validate user details - not empty
+    if(!username || !email || !password) {
+        res.status(400);
+        throw new apiError(400, "All fields are required");
+    }
+
+    // check if user exists in DB
+    const user = User.findOne({ 
+        $or: [ { username: username.toLowerCase() }, { email: username.toLowerCase() } ]
+     })
+    if(!user) {
+        res.status(404);
+        throw new apiError(404, "User not found, please register");
+    }
+
+    // check if password matches 
+    const isPasswordMatched = await user.isPasswordCorrect(password);
+    if(!isPasswordMatched) {
+        res.status(401);
+        throw new apiError(401, "Invalid credentials, password does not match");
+    }
+
+    // generate access and refresh tokens
+    const accessToken = user.generateAccessToken();
+    const refreshToken = user.generateRefreshToken();
+
+    // save refresh token in DB
+    user.refreshToken = refreshToken;
+    await user.save();
+
+    // send response
+    return res.status(200).json(
+        new apiResponse(200, {
+            accessToken,
+            refreshToken,
+            user: {
+                _id: user._id,
+                username: user.username,
+                email: user.email,
+                fullName: user.fullName,
+                avatar: user.avatar,
+                coverImage: user.coverImage,
+                watchHistory: user.watchHistory,
+            }
+        }, "User logged in successfully")
+    );
+
+
+});
+
+export { registerUser, loginUser }; // named export shorthand
