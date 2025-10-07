@@ -70,6 +70,23 @@ const registerUser = asyncHandler( async (req, res) => {
 
 })
 
+const generateTokens = async (user) => {
+    try {
+
+        const userId = await User.findById(user);
+        const accessToken = userId.generateAccessToken();
+        const refreshToken = userId.generateRefreshToken();
+
+        userId.refreshToken = refreshToken;
+        await userId.save();
+
+        return { accessToken, refreshToken };
+
+    } catch (error) {
+        throw new apiError(500, "Token generation failed, please try again");
+    } 
+}
+
 const loginUser = asyncHandler( async (req, res) => {
     const { email, username, password } = req.body;
 
@@ -96,18 +113,21 @@ const loginUser = asyncHandler( async (req, res) => {
     }
 
     // generate access and refresh tokens
-    const accessToken = user.generateAccessToken();
-    const refreshToken = user.generateRefreshToken();
+    const { accessToken, refreshToken } = await generateTokens(user._id);
 
-    // save refresh token in DB
-    user.refreshToken = refreshToken;
-    await user.save();
+    const options = {
+        httpOnly: true,
+        secure: true, // only server can access the cookie
+        sameSite: "Strict", // CSRF protection
+        maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+    }
 
     // send response
-    return res.status(200).json(
+    return res.status(200).cookie('accessToken', accessToken, options).cookie('refreshToken', refreshToken, options)
+    .json(
         new apiResponse(200, {
             accessToken,
-            refreshToken,
+            refreshToken, 
             user: {
                 _id: user._id,
                 username: user.username,
@@ -123,4 +143,21 @@ const loginUser = asyncHandler( async (req, res) => {
 
 });
 
-export { registerUser, loginUser }; // named export shorthand
+const logoutUser = asyncHandler( async (req, res) => {
+    const userId = req.user._id;
+
+    // Remove refresh token from DB
+    await User.findByIdAndUpdate(userId, { $set: { refreshToken: undefined } }, { new: true } );
+
+    const options = {
+        httpOnly: true,
+        secure: true, // only server can access the cookie
+        sameSite: "Strict", // CSRF protection
+    }
+        res.clearCookie("accessToken", options);
+        res.clearCookie("refreshToken", options);
+
+    return res.status(200).json(new apiResponse(200, null, "User logged out successfully"));
+});
+
+export { registerUser, loginUser, logoutUser }; // named export shorthand
