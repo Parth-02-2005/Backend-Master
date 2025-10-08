@@ -97,7 +97,7 @@ const loginUser = asyncHandler( async (req, res) => {
     }
 
     // check if user exists in DB
-    const user = User.findOne({ 
+    const user = await User.findOne({ 
         $or: [ { username: username.toLowerCase() }, { email: username.toLowerCase() } ]
      })
     if(!user) {
@@ -139,7 +139,6 @@ const loginUser = asyncHandler( async (req, res) => {
             }
         }, "User logged in successfully")
     );
-
 
 });
 
