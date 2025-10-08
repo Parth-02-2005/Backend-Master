@@ -15,6 +15,6 @@ router.post('/login', loginUser);
 
 // Protected route 
 router.post('/logout', authenticateUser, logoutUser);
-router.post('/refresh-token', authenticateUser, refreshAccessToken);
+router.post('/refresh-token', refreshAccessToken);
 
 export default router
