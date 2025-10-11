@@ -2,6 +2,7 @@ import asyncHandler from "../utils/asyncHandler.js";
 import apiError from "../utils/apiError.js";
 import { User } from "../models/user.model.js";
 import uploadToCloudinary from "../utils/cloudinary.js";
+import deleteToCloudinary from "../utils/cloudinary.js"
 import apiResponse from "../utils/apiResponse.js";
 import jwt from "jsonwebtoken";
 
@@ -170,8 +171,9 @@ const logoutUser = asyncHandler(async (req, res) => {
 });
 
 const refreshAccessToken = asyncHandler(async (req, res) => {
-    // get refresh token from cookie or req.body
-  const incomingRefreshToken = req.cookies.refreshToken || req.body.refreshToken;
+  // get refresh token from cookie or req.body
+  const incomingRefreshToken =
+    req.cookies.refreshToken || req.body.refreshToken;
 
   if (!incomingRefreshToken) {
     res.status(401);
@@ -184,41 +186,48 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
       incomingRefreshToken,
       process.env.REFRESH_TOKEN_SECRET
     );
-  
+
     if (!decodedToken || !decodedToken.id) {
       res.status(401);
       throw new apiError(401, "Invalid refresh token");
     }
-  
+
     const user = await User.findById(decodedToken?._id);
-  
+
     const incomingUserRefreshToken = user?.refreshToken;
-  
+
     if (incomingRefreshToken !== incomingUserRefreshToken) {
       res.status(401);
       throw new apiError(401, "Invalid refresh token");
     }
-    
+
     // generate new access token
     const { accessToken, newRefreshToken } = await generateTokens(user._id);
-  
-    res.status(200)
-    .cookie("accessToken", accessToken, {
-      httpOnly: true,
-      secure: true, // only server can access the cookie
-    })
-    .cookie("refreshToken", newRefreshToken, {
-      httpOnly: true,
-      secure: true, // only server can access the cookie
-    })
-    .json(
-      new apiResponse(200, { accessToken, refreshToken: newRefreshToken }, "Access token refreshed successfully")
-    );
+
+    res
+      .status(200)
+      .cookie("accessToken", accessToken, {
+        httpOnly: true,
+        secure: true, // only server can access the cookie
+      })
+      .cookie("refreshToken", newRefreshToken, {
+        httpOnly: true,
+        secure: true, // only server can access the cookie
+      })
+      .json(
+        new apiResponse(
+          200,
+          { accessToken, refreshToken: newRefreshToken },
+          "Access token refreshed successfully"
+        )
+      );
   } catch (error) {
     res.status(401);
-    throw new apiError(401, error?.message || "Invalid or expired refresh token");
+    throw new apiError(
+      401,
+      error?.message || "Invalid or expired refresh token"
+    );
   }
-
 });
 
 const changeCurrentPassword = asyncHandler(async (req, res) => {
@@ -226,12 +235,12 @@ const changeCurrentPassword = asyncHandler(async (req, res) => {
 
   const userId = req.user._id;
 
-  if(!currentPassword || !newPassword) {  
+  if (!currentPassword || !newPassword) {
     res.status(400);
     throw new apiError(400, "Current and new passwords are required");
   }
 
-  const user = await User.findById(userId)
+  const user = await User.findById(userId);
 
   const isPasswordMatched = await user.isPasswordCorrect(currentPassword);
   if (!isPasswordMatched) {
@@ -239,33 +248,125 @@ const changeCurrentPassword = asyncHandler(async (req, res) => {
     throw new apiError(401, "Current password is incorrect");
   }
   user.password = newPassword;
-  await user.save({validateBeforeSave: false});
+  await user.save({ validateBeforeSave: false });
 
-  return res.status(200).json(new apiResponse(200, null, "Password changed successfully"));
+  return res
+    .status(200)
+    .json(new apiResponse(200, null, "Password changed successfully"));
 });
 
-const getCurrentUser = asyncHandler( async (req, res) => {
+const getCurrentUser = asyncHandler(async (req, res) => {
   const user = req.user;
-  return res.status(200)
-  .json( new apiResponse(200, user, 'current user fetched successfully'))
+  return res
+    .status(200)
+    .json(new apiResponse(200, user, "current user fetched successfully"));
 });
 
-const updateAccountDetails = asyncHandler( async (req, res) => {
-  const { fullName, email, } = req.body;
+const updateAccountDetails = asyncHandler(async (req, res) => {
+  const { fullName, email } = req.body;
 
-  if(!fullName || !email) {
+  if (!fullName || !email) {
     res.status(400);
     throw new apiError(400, "fullName and email are required");
   }
 
-  const user = await User.findByIdAndUpdate(req.user?._id, {
-    $set: {
-      fullName,
-      email
-    }
-  }, {new: true}).select('-password')
+  const user = await User.findByIdAndUpdate(
+    req.user?._id,
+    {
+      $set: {
+        fullName,
+        email,
+      },
+    },
+    { new: true }
+  ).select("-password");
 
-  return res.status(200).json(new apiResponse(200, user, 'user updated successfully'))
+  return res
+    .status(200)
+    .json(new apiResponse(200, user, "user updated successfully"));
 });
 
-export { registerUser, loginUser, logoutUser, refreshAccessToken, changeCurrentPassword, getCurrentUser, updateAccountDetails }; // named export shorthand
+const udpateUserAvatar = asyncHandler(async (req, res) => {
+  const user = req.user;
+
+  const avatarLocalPath = req.file.path;
+
+  if (!avatarLocalPath) {
+    res.status(400);
+    throw new apiError(400, "avatar file is required");
+  }
+
+  const avatar = await uploadToCloudinary(avatarLocalPath, "Avatars");
+
+  if (!avatar.secure_url) {
+    res.status(400);
+    throw new apiError(400, "Failed to upload avatar, no URL returned");
+  }
+
+  if(user.avatar) {
+    function extractPublicId(secureUrl) {
+    // Example URL: https://res.cloudinary.com/mycloud/image/upload/v1727123456/avatars/profile_pic_abcd1234.jpg
+    const parts = secureUrl.split("/");
+    const versionIndex = parts.findIndex((part) => part.startsWith("v"));
+
+    // join everything after version and remove extension (.jpg, .png, etc.)
+    const publicIdWithExt = parts.slice(versionIndex + 1).join("/");
+    const publicId = publicIdWithExt.substring(
+      0,
+      publicIdWithExt.lastIndexOf(".")
+    );
+
+    return publicId;
+  };
+
+  const publicId = extractPublicId(user.avatar);
+  await deleteToCloudinary(publicId);
+  }
+
+  user.avatar = avatar.secure_url;
+  await user.save();
+
+  return res
+    .status(200)
+    .json(new apiResponse(200, user, "avatar updated successfully"));
+});
+
+const udpateUserCoverImage = asyncHandler(async (req, res) => {
+  const user = req.user;
+
+  const coverImageLocalPath = req.file.path;
+
+  if (!coverImageLocalPath) {
+    res.status(400);
+    throw new apiError(400, "coverImage file is required");
+  }
+
+  const coverImage = await uploadToCloudinary(
+    coverImageLocalPath,
+    "CoverImages"
+  );
+
+  if (!coverImage.url) {
+    res.status(400);
+    throw new apiError(400, "Failed to upload coverImage, no URL returned");
+  }
+
+  user.coverImage = coverImage.secure_url;
+  await user.save();
+
+  return res
+    .status(200)
+    .json(new apiResponse(200, user, "coverImage updated successfully"));
+});
+
+export {
+  registerUser,
+  loginUser,
+  logoutUser,
+  refreshAccessToken,
+  changeCurrentPassword,
+  getCurrentUser,
+  updateAccountDetails,
+  udpateUserAvatar,
+  udpateUserCoverImage,
+}; // named export shorthand
