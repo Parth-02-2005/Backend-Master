@@ -221,4 +221,51 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
 
 });
 
-export { registerUser, loginUser, logoutUser, refreshAccessToken }; // named export shorthand
+const changeCurrentPassword = asyncHandler(async (req, res) => {
+  const { currentPassword, newPassword } = req.body;
+
+  const userId = req.user._id;
+
+  if(!currentPassword || !newPassword) {  
+    res.status(400);
+    throw new apiError(400, "Current and new passwords are required");
+  }
+
+  const user = await User.findById(userId)
+
+  const isPasswordMatched = await user.isPasswordCorrect(currentPassword);
+  if (!isPasswordMatched) {
+    res.status(401);
+    throw new apiError(401, "Current password is incorrect");
+  }
+  user.password = newPassword;
+  await user.save({validateBeforeSave: false});
+
+  return res.status(200).json(new apiResponse(200, null, "Password changed successfully"));
+});
+
+const getCurrentUser = asyncHandler( async (req, res) => {
+  const user = req.user;
+  return res.status(200)
+  .json( new apiResponse(200, user, 'current user fetched successfully'))
+});
+
+const updateAccountDetails = asyncHandler( async (req, res) => {
+  const { fullName, email, } = req.body;
+
+  if(!fullName || !email) {
+    res.status(400);
+    throw new apiError(400, "fullName and email are required");
+  }
+
+  const user = await User.findByIdAndUpdate(req.user?._id, {
+    $set: {
+      fullName,
+      email
+    }
+  }, {new: true}).select('-password')
+
+  return res.status(200).json(new apiResponse(200, user, 'user updated successfully'))
+});
+
+export { registerUser, loginUser, logoutUser, refreshAccessToken, changeCurrentPassword, getCurrentUser, updateAccountDetails }; // named export shorthand
