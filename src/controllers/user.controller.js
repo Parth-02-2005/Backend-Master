@@ -305,7 +305,7 @@ const udpateUserAvatar = asyncHandler(async (req, res) => {
 
   if(user.avatar) {
     function extractPublicId(secureUrl) {
-    // Example URL: https://res.cloudinary.com/mycloud/image/upload/v1727123456/avatars/profile_pic_abcd1234.jpg
+  // Example URL: https://res.cloudinary.com/mycloud/image/upload/v1727123456/avatars/profile_pic_abcd1234.jpg
     const parts = secureUrl.split("/");
     const versionIndex = parts.findIndex((part) => part.startsWith("v"));
 
