@@ -2,7 +2,7 @@ import asyncHandler from "../utils/asyncHandler.js";
 import apiError from "../utils/apiError.js";
 import { User } from "../models/user.model.js";
 import uploadToCloudinary from "../utils/cloudinary.js";
-import deleteToCloudinary from "../utils/cloudinary.js"
+import deleteToCloudinary from "../utils/cloudinary.js";
 import apiResponse from "../utils/apiResponse.js";
 import jwt from "jsonwebtoken";
 
@@ -303,24 +303,24 @@ const udpateUserAvatar = asyncHandler(async (req, res) => {
     throw new apiError(400, "Failed to upload avatar, no URL returned");
   }
 
-  if(user.avatar) {
+  if (user.avatar) {
     function extractPublicId(secureUrl) {
-  // Example URL: https://res.cloudinary.com/mycloud/image/upload/v1727123456/avatars/profile_pic_abcd1234.jpg
-    const parts = secureUrl.split("/");
-    const versionIndex = parts.findIndex((part) => part.startsWith("v"));
+      // Example URL: https://res.cloudinary.com/mycloud/image/upload/v1727123456/avatars/profile_pic_abcd1234.jpg
+      const parts = secureUrl.split("/");
+      const versionIndex = parts.findIndex((part) => part.startsWith("v"));
 
-    // join everything after version and remove extension (.jpg, .png, etc.)
-    const publicIdWithExt = parts.slice(versionIndex + 1).join("/");
-    const publicId = publicIdWithExt.substring(
-      0,
-      publicIdWithExt.lastIndexOf(".")
-    );
+      // join everything after version and remove extension (.jpg, .png, etc.)
+      const publicIdWithExt = parts.slice(versionIndex + 1).join("/");
+      const publicId = publicIdWithExt.substring(
+        0,
+        publicIdWithExt.lastIndexOf(".")
+      );
 
-    return publicId;
-  };
+      return publicId;
+    }
 
-  const publicId = extractPublicId(user.avatar);
-  await deleteToCloudinary(publicId);
+    const publicId = extractPublicId(user.avatar);
+    await deleteToCloudinary(publicId);
   }
 
   user.avatar = avatar.secure_url;
@@ -359,7 +359,82 @@ const udpateUserCoverImage = asyncHandler(async (req, res) => {
     .json(new apiResponse(200, user, "coverImage updated successfully"));
 });
 
+const getUserChannelProfile = asyncHandler(async (req, res) => {
+  const { username } = req.params;
+
+  if (!username) {
+    res.status(400);
+    throw new apiError(400, "usernmae is missing");
+  }
+
+  const channel = await User.aggregate([
+    {
+      $match: {
+        username: this.username?.toLowerCase(),
+      },
+    },
+    {
+      $lookup: {
+        from: "subscriptions",
+        localField: "_id",
+        foreignField: "channel",
+        as: "subscribers",
+      },
+    },
+    {
+      $lookup: {
+        from: "subscriptions",
+        localField: "_id", // _id of current user
+        foreignField: "subscriber", // field in subscription docs that stores subscriber id
+        as: "subscribedTo",
+      },
+    },
+    {
+      $addFields: {
+        subscribersCount: {
+          $size: "$subscribers",
+        },
+        channelSubscribedToCount: {
+          $size: "$subscribedTo",
+        },
+        isSubscribed: {
+          $cond: {
+            if: { $in: [req.user?._id, "$subscribers.subscriber"] },
+            then: true,
+            else: false,
+          },
+        },
+      },
+    },
+    {
+      $project: {
+        fullName: 1,
+        username: 1,
+        email: 1,
+        avatar: 1,
+        coverImage: 1,
+        subscribersCount: 1,
+        channelSubscribedToCount: 1,
+        isSubscribed: 1,
+      },
+    },
+  ]);
+
+  console.log(channel);
+
+  if (!channel?.length) {
+    res.status(404);
+    throw new apiError(404, "channel does not exists");
+  }
+
+  return res
+  .status(200)
+  .json(new apiResponse(200, channel[0], "User channel fetched successfully"));
+
+});
+
 export {
+
   registerUser,
   loginUser,
   logoutUser,
@@ -369,4 +444,6 @@ export {
   updateAccountDetails,
   udpateUserAvatar,
   udpateUserCoverImage,
+  getUserChannelProfile,
+  
 }; // named export shorthand
