@@ -5,6 +5,7 @@ import uploadToCloudinary from "../utils/cloudinary.js";
 import deleteToCloudinary from "../utils/cloudinary.js";
 import apiResponse from "../utils/apiResponse.js";
 import jwt from "jsonwebtoken";
+import mongoose from "mongoose";
 
 const registerUser = asyncHandler(async (req, res) => {
   // Get user details from req.body
@@ -433,6 +434,26 @@ const getUserChannelProfile = asyncHandler(async (req, res) => {
 
 });
 
+const getWatchHistory = asyncHandler( async (req, res) => {
+
+  const user = await User.aggregate([
+    {
+      $match: {
+        _id: new mongoose.Types.ObjectId(req.user._id)
+      }
+    }, 
+    {
+      $lookup: {
+        from: "videos",
+        localField: "watchHistory",
+        foreignField: "_id",
+        as: "watchHistory"
+      }
+    },
+    
+  ])
+})
+
 export {
 
   registerUser,
@@ -445,5 +466,6 @@ export {
   udpateUserAvatar,
   udpateUserCoverImage,
   getUserChannelProfile,
+  getWatchHistory
   
 }; // named export shorthand
