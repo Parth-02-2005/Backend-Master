@@ -254,7 +254,7 @@ const changeCurrentPassword = asyncHandler(async (req, res) => {
   return res
     .status(200)
     .json(new apiResponse(200, null, "Password changed successfully"));
-});
+}); 
 
 const getCurrentUser = asyncHandler(async (req, res) => {
   const user = req.user;
@@ -447,11 +447,40 @@ const getWatchHistory = asyncHandler( async (req, res) => {
         from: "videos",
         localField: "watchHistory",
         foreignField: "_id",
-        as: "watchHistory"
+        as: "watchHistory",
+        pipeline: [
+          {
+            $lookup: {
+              from: "users",
+              localField: "owner",
+              foreignField: "_id",
+              as: "owner",
+              pipeline: [
+                {
+                  $project: {
+                    fullName: 1,
+                    username: 1,
+                    avatar: 1
+                  } 
+                }
+              ]
+            }
+          },
+          {
+            $addFields: {
+              owner: {
+                $first: "$owner"
+              }
+            }
+          }
+        ]
       }
-    },
-    
+    }, 
+
   ])
+
+  return res.status(200).json(new apiResponse(200, user[0].watchHistory, "watch history fetched successfully"))
+
 })
 
 export {
@@ -468,4 +497,4 @@ export {
   getUserChannelProfile,
   getWatchHistory
   
-}; // named export shorthand
+}; // named export shorthand 
