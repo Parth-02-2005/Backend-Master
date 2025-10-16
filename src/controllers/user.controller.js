@@ -115,6 +115,10 @@ const loginUser = asyncHandler(async (req, res) => {
   // generate access and refresh tokens
   const { accessToken, refreshToken } = await generateTokens(user._id);
 
+  // save refresh token to user document
+  user.refreshToken = refreshToken;
+  await user.save({ validateBeforeSave: false });
+
   const options = {
     httpOnly: true,
     secure: true, // only server can access the cookie
@@ -154,7 +158,7 @@ const logoutUser = asyncHandler(async (req, res) => {
   // Remove refresh token from DB
   await User.findByIdAndUpdate(
     userId,
-    { $set: { refreshToken: undefined } },
+    { $unset: { refreshToken: 1 } },
     { new: true }
   );
 
@@ -173,8 +177,12 @@ const logoutUser = asyncHandler(async (req, res) => {
 
 const refreshAccessToken = asyncHandler(async (req, res) => {
   // get refresh token from cookie or req.body
+  // console.log("working");
+
   const incomingRefreshToken =
     req.cookies.refreshToken || req.body.refreshToken;
+
+  // console.log(incomingRefreshToken);
 
   if (!incomingRefreshToken) {
     res.status(401);
@@ -188,12 +196,16 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
       process.env.REFRESH_TOKEN_SECRET
     );
 
-    if (!decodedToken || !decodedToken.id) {
+    // console.log("Decoded token:", decodedToken);
+
+    if (!decodedToken || !decodedToken._id) {
       res.status(401);
       throw new apiError(401, "Invalid refresh token");
     }
 
     const user = await User.findById(decodedToken?._id);
+
+    // console.log(user);
 
     const incomingUserRefreshToken = user?.refreshToken;
 
@@ -254,7 +266,7 @@ const changeCurrentPassword = asyncHandler(async (req, res) => {
   return res
     .status(200)
     .json(new apiResponse(200, null, "Password changed successfully"));
-}); 
+});
 
 const getCurrentUser = asyncHandler(async (req, res) => {
   const user = req.user;
@@ -429,19 +441,19 @@ const getUserChannelProfile = asyncHandler(async (req, res) => {
   }
 
   return res
-  .status(200)
-  .json(new apiResponse(200, channel[0], "User channel fetched successfully"));
-
+    .status(200)
+    .json(
+      new apiResponse(200, channel[0], "User channel fetched successfully")
+    );
 });
 
-const getWatchHistory = asyncHandler( async (req, res) => {
-
+const getWatchHistory = asyncHandler(async (req, res) => {
   const user = await User.aggregate([
     {
       $match: {
-        _id: new mongoose.Types.ObjectId(req.user._id)
-      }
-    }, 
+        _id: new mongoose.Types.ObjectId(req.user._id),
+      },
+    },
     {
       $lookup: {
         from: "videos",
@@ -460,31 +472,36 @@ const getWatchHistory = asyncHandler( async (req, res) => {
                   $project: {
                     fullName: 1,
                     username: 1,
-                    avatar: 1
-                  } 
-                }
-              ]
-            }
+                    avatar: 1,
+                  },
+                },
+              ],
+            },
           },
           {
             $addFields: {
               owner: {
-                $first: "$owner"
-              }
-            }
-          }
-        ]
-      }
-    }, 
+                $first: "$owner",
+              },
+            },
+          },
+        ],
+      },
+    },
+  ]);
 
-  ])
-
-  return res.status(200).json(new apiResponse(200, user[0].watchHistory, "watch history fetched successfully"))
-
-})
+  return res
+    .status(200)
+    .json(
+      new apiResponse(
+        200,
+        user[0].watchHistory,
+        "watch history fetched successfully"
+      )
+    );
+});
 
 export {
-
   registerUser,
   loginUser,
   logoutUser,
@@ -495,6 +512,5 @@ export {
   udpateUserAvatar,
   udpateUserCoverImage,
   getUserChannelProfile,
-  getWatchHistory
-  
-}; // named export shorthand 
+  getWatchHistory,
+}; // named export shorthand
