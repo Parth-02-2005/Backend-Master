@@ -17,10 +17,11 @@ app.use(cookieParser()); // middleware to parse cookies
 
 // routes import
 import userRoutes from './routes/user.routes.js';
-
+import videoRoutes from './routes/video.routes.js'
 
 // routes decelaration
 app.use('/api/v1/users', userRoutes);
+app.use('api/v2/videos', videoRoutes);
 
 
 
