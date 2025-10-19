@@ -1,9 +1,10 @@
 import mongoose, {isValidObjectId} from "mongoose"
 import {Video} from "../models/video.model.js"
 import {User} from "../models/user.model.js"
-import {asyncHandler} from "../utils/asyncHandler.js"
-import uploadToCloudinary from "../utils/cloudinary.js";
+import asyncHandler from "../utils/asyncHandler.js"
+import {uploadToCloudinary} from "../utils/cloudinary.js";
 import apiError from "../utils/apiError.js"
+import apiResponse from "../utils/apiResponse.js";
 
 
 const getAllVideos = asyncHandler(async (req, res) => {
@@ -18,6 +19,7 @@ const publishAVideo = asyncHandler(async (req, res) => {
         res.status(400)
         throw new apiError(400, "All fields are required");
     }
+
     // TODO: get video, upload to cloudinary, create video
     const videoLocalFile = req.files?.videoFile[0]?.path;
     const thumbnailLocalFile = req.files?.thumbnail[0]?.path;
@@ -48,7 +50,7 @@ const publishAVideo = asyncHandler(async (req, res) => {
 
     return res
     .status(200)
-    .json(new ApiResponse(200,video,"Video published successfully")) 
+    .json(new apiResponse(200,video,"Video published successfully")) 
 
 })
 

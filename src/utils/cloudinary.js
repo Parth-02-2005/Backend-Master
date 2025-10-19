@@ -8,7 +8,7 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
-const uploadToCloudinary = async (file, folderName) => {
+export const uploadToCloudinary = async (file, folderName) => {
     try {
         if(!file) return;
         // upload to cloudinary
@@ -30,7 +30,7 @@ const uploadToCloudinary = async (file, folderName) => {
     }
 }
 
-const deleteToCloudinary = async(publicId) => {
+export const deleteToCloudinary = async(publicId) => {
     try {
         const result = await cloudinary.uploader.destroy(publicId);
         console.log("Cloudinary delete result:", result);
@@ -40,4 +40,4 @@ const deleteToCloudinary = async(publicId) => {
     }
 }
 
-export default {uploadToCloudinary, deleteToCloudinary}
+// export default { uploadToCloudinary, deleteToCloudinary }
