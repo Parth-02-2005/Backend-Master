@@ -10,6 +10,14 @@ import apiResponse from "../utils/apiResponse.js";
 const getAllVideos = asyncHandler(async (req, res) => {
     const { page = 1, limit = 10, query, sortBy, sortType, userId } = req.query
     //TODO: get all videos based on query, sort, pagination
+    console.log(req.query.userId);
+    const user = req.qurey.userId;
+
+    if(!user) {
+        res.status(400)
+        throw new apiError(400, 'un authorized');
+    }
+    
 })
 
 const publishAVideo = asyncHandler(async (req, res) => {
