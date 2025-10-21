@@ -19,12 +19,12 @@ const getAllVideos = asyncHandler(async (req, res) => {
   const limitNumber = limit;
 
   if (!userId) {
-    throw new ApiError(400, "Unauthorized access: userId required");
+    throw new apiError(400, "Unauthorized access: userId required");
   }
 
   const existedUser = await User.findById(userId);
   if (!existedUser) {
-    throw new ApiError(404, "User not found");
+    throw new apiError(404, "User not found");
   }
 
   const userVideos = await User.aggregate([
@@ -55,13 +55,13 @@ const getAllVideos = asyncHandler(async (req, res) => {
   ]);
 
   if (!userVideos || userVideos.length === 0 || !userVideos[0].videos.length) {
-    throw new ApiError(404, "No videos found");
+    throw new apiError(404, "No videos found");
   }
 
   const videos = userVideos[0].videos;
 
   return res.status(200).json(
-    new ApiResponse(
+    new apiResponse(
       200,
       {
         currentPage: pageNumber,
