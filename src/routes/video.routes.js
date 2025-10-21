@@ -1,7 +1,7 @@
 import express from "express";
 import upload from "../middlewares/multer.middleware.js";
 import { authenticateUser } from "../middlewares/auth.middleware.js";
-import { publishAVideo } from "../controllers/video.controller.js";
+import { getAllVideos, publishAVideo } from "../controllers/video.controller.js";
 
 const router = express.Router();
 
@@ -9,5 +9,6 @@ router.post('/publish-video',
     authenticateUser, 
     upload.fields([{name: 'videoFile', maxCount: 1}, {name: 'thumbnail', maxCount: 1}]), 
     publishAVideo)
+router.get('/get-video', authenticateUser, getAllVideos);
 
 export default router

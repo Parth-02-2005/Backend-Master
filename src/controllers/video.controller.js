@@ -8,17 +8,70 @@ import apiResponse from "../utils/apiResponse.js";
 
 
 const getAllVideos = asyncHandler(async (req, res) => {
-    const { page = 1, limit = 10, query, sortBy, sortType, userId } = req.query
-    //TODO: get all videos based on query, sort, pagination
-    console.log(req.query.userId);
-    const user = req.qurey.userId;
+  const page = Math.max(parseInt(req.query.page || "1", 10), 1);
+  const limit = Math.max(parseInt(req.query.limit || "10", 10), 1);
+  const query = (req.query.query || "").trim();
+  const sortBy = req.query.sortBy || "createdAt";
+  const sortType = (req.query.sortType || "desc").toLowerCase();
+  const userId = req.query.userId;
 
-    if(!user) {
-        res.status(400)
-        throw new apiError(400, 'un authorized');
-    }
-    
-})
+  const pageNumber = page;
+  const limitNumber = limit;
+
+  if (!userId) {
+    throw new ApiError(400, "Unauthorized access: userId required");
+  }
+
+  const existedUser = await User.findById(userId);
+  if (!existedUser) {
+    throw new ApiError(404, "User not found");
+  }
+
+  const userVideos = await User.aggregate([
+    { $match: { _id: new mongoose.Types.ObjectId(userId) } },
+    {
+      $lookup: {
+        from: "videos",
+        localField: "_id",
+        foreignField: "owner",
+        as: "videos",
+      },
+    },
+    { $unwind: { path: "$videos", preserveNullAndEmptyArrays: true } },
+    ...(query
+      ? [{ $match: { "videos.title": { $regex: query, $options: "i" } } }]
+      : []),
+    {
+      $sort: { [`videos.${sortBy}`]: sortType === "asc" ? 1 : -1 },
+    },
+    { $skip: (pageNumber - 1) * limitNumber },
+    { $limit: limitNumber },
+    {
+      $group: {
+        _id: "$_id",
+        videos: { $push: "$videos" },
+      },
+    },
+  ]);
+
+  if (!userVideos || userVideos.length === 0 || !userVideos[0].videos.length) {
+    throw new ApiError(404, "No videos found");
+  }
+
+  const videos = userVideos[0].videos;
+
+  return res.status(200).json(
+    new ApiResponse(
+      200,
+      {
+        currentPage: pageNumber,
+        totalVideos: videos.length,
+        videos,
+      },
+      "Videos fetched successfully"
+    )
+  );
+});
 
 const publishAVideo = asyncHandler(async (req, res) => {
     const { title, description } = req.body
