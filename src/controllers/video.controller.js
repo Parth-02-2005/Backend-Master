@@ -118,6 +118,21 @@ const publishAVideo = asyncHandler(async (req, res) => {
 const getVideoById = asyncHandler(async (req, res) => {
     const { videoId } = req.params
     //TODO: get video by id
+    const video = await Video.findById(videoId);
+
+    if (!video) {
+        res.status(404);
+        throw new apiError(404, 'Video not found');
+    }
+
+    const videoUrl = video.videoFile;
+
+    if(!result) {
+      res.status(404)
+      throw new apiError(400, 'video not fetched');
+    }
+
+    res.status(200).json(new apiResponse(200, videoUrl, 'video fetched successfully'));
 })
 
 const updateVideo = asyncHandler(async (req, res) => {
