@@ -1,11 +1,10 @@
-import mongoose, {isValidObjectId} from "mongoose"
-import {Video} from "../models/video.model.js"
-import {User} from "../models/user.model.js"
-import asyncHandler from "../utils/asyncHandler.js"
-import {uploadToCloudinary} from "../utils/cloudinary.js";
-import apiError from "../utils/apiError.js"
+import mongoose, { isValidObjectId } from "mongoose";
+import { Video } from "../models/video.model.js";
+import { User } from "../models/user.model.js";
+import asyncHandler from "../utils/asyncHandler.js";
+import { uploadToCloudinary } from "../utils/cloudinary.js";
+import apiError from "../utils/apiError.js";
 import apiResponse from "../utils/apiResponse.js";
-
 
 const getAllVideos = asyncHandler(async (req, res) => {
   const page = Math.max(parseInt(req.query.page || "1", 10), 1);
@@ -74,122 +73,149 @@ const getAllVideos = asyncHandler(async (req, res) => {
 });
 
 const publishAVideo = asyncHandler(async (req, res) => {
-    const { title, description } = req.body
+  const { title, description } = req.body;
 
-    if(!title || !description) {
-        res.status(400)
-        throw new apiError(400, "All fields are required");
-    }
+  if (!title || !description) {
+    res.status(400);
+    throw new apiError(400, "All fields are required");
+  }
 
-    // TODO: get video, upload to cloudinary, create video
-    const videoLocalFile = req.files?.videoFile[0]?.path;
-    const thumbnailLocalFile = req.files?.thumbnail[0]?.path;
+  // TODO: get video, upload to cloudinary, create video
+  const videoLocalFile = req.files?.videoFile[0]?.path;
+  const thumbnailLocalFile = req.files?.thumbnail[0]?.path;
 
-    if(!videoLocalFile || !thumbnailLocalFile) {
-        res.status(400)
-        throw new apiError(400, 'video or thumbnail missing')
-    }
+  if (!videoLocalFile || !thumbnailLocalFile) {
+    res.status(400);
+    throw new apiError(400, "video or thumbnail missing");
+  }
 
-    const videoFile = await uploadToCloudinary(videoLocalFile, "Videos");
-    const thumbnailFile = await uploadToCloudinary(thumbnailLocalFile, "Thumbnail");
+  const videoFile = await uploadToCloudinary(videoLocalFile, "Videos");
+  const thumbnailFile = await uploadToCloudinary(
+    thumbnailLocalFile,
+    "Thumbnail"
+  );
 
-    if(!videoFile || !thumbnailFile) {
-        res.status(400)
-        throw new apiError(400, 'failed upload to cloudinary');
-    }
+  if (!videoFile || !thumbnailFile) {
+    res.status(400);
+    throw new apiError(400, "failed upload to cloudinary");
+  }
 
-    const video = await Video.create({
-        videoFile: videoFile.secure_url,
-        thumbnail: thumbnailFile.secure_url,
-        title, 
-        description,
-        owner: req.user._id,
-        isPublished: true,
-        duration: videoFile.duration,
-        views: 0
-    })
+  const video = await Video.create({
+    videoFile: videoFile.secure_url,
+    thumbnail: thumbnailFile.secure_url,
+    title,
+    description,
+    owner: req.user._id,
+    isPublished: true,
+    duration: videoFile.duration,
+    views: 0,
+  });
 
-    return res
+  return res
     .status(200)
-    .json(new apiResponse(200,video,"Video published successfully")) 
-
-})
+    .json(new apiResponse(200, video, "Video published successfully"));
+});
 
 const getVideoById = asyncHandler(async (req, res) => {
-    const { videoId } = req.params
-    //TODO: get video by id
-    const video = await Video.findById(videoId);
+  const { videoId } = req.params;
+  //TODO: get video by id
+  const video = await Video.findById(videoId);
 
-    if (!video) {
-        res.status(404);
-        throw new apiError(404, 'Video not found');
-    }
+  if (!video) {
+    res.status(404);
+    throw new apiError(404, "Video not found");
+  }
 
-    const videoUrl = video.videoFile;
+  const videoUrl = video.videoFile;
 
-    if(!result) {
-      res.status(404)
-      throw new apiError(400, 'video not fetched');
-    }
+  if (!result) {
+    res.status(404);
+    throw new apiError(400, "video not fetched");
+  }
 
-    res.status(200).json(new apiResponse(200, videoUrl, 'video fetched successfully'));
-})
+  res
+    .status(200)
+    .json(new apiResponse(200, videoUrl, "video fetched successfully"));
+});
 
 const updateVideo = asyncHandler(async (req, res) => {
-    const { videoId } = req.params
-    //TODO: update video details like title, description, thumbnail
-    if(!videoId?.trim()) {
-        throw new ApiError(400, "videoId is required")
-    }
+  //TODO: update video details like title, description, thumbnail
 
-    const isVideoExisted = await Video.findById(videoId)
+  const { videoId } = req.params;
+  if (!videoId?.trim()) {
+    throw new apiError(400, "videoId is required");
+  }
 
-    if(!isVideoExisted) {
-        throw new apiError(404, "Video not found")
-    }
+  const isVideoExisted = await Video.findById(videoId);
 
-    const { title, description } = req.body;
+  if (!isVideoExisted) {
+    throw new apiError(404, "Video not found");
+  }
 
-    // const videoLocalFile = req.files?.video[0]?.path;
+  const { title, description } = req.body;
+
+  if([title, description].some((field) => field?.trim() === "")) {
+    throw new apiError(404, 'title or description is required')
+  }
+
+  if (!title && !description && !req.files?.thumbnail) {
+    throw new apiError(
+      400,
+      "At least one field (title, description, thumbnail) is required to update"
+    );
+  }
+
+  let thumbnailUrl = isVideoExisted.thumbnail;
+
+  // const videoLocalFile = req.files?.video[0]?.path;
+  if (req.files?.thumbnail[0]?.path) {
     const thumbnailLocalFile = req.files?.thumbnail[0]?.path;
-
-    // const videoFile = await uploadToCloudinary(videoLocalFile, "Videos");
-    const thumbnailFile = await uploadToCloudinary(thumbnailLocalFile, "Thumbnail");
-
+    const thumbnailFile = await uploadToCloudinary(
+      thumbnailLocalFile,
+      "Thumbnail"
+    );
     if (!thumbnailFile) {
-        res.status(400)
-        throw new apiError(400, 'failed upload to cloudinary');
+      throw new apiError(400, "failed upload to cloudinary");
     }
+    thumbnailUrl = thumbnailFile.secure_url;
+  }
 
-    const video = new Video.findByIdAndUpdate(videoId, {
+  // const videoFile = await uploadToCloudinary(videoLocalFile, "Videos");
+
+  const video = await Video.findByIdAndUpdate(
+    videoId,
+    {
       // videoFile: videoFile.secure_url,
-      thumbnail: thumbnailFile.secure_url,
-      title, 
-      description,
-      duration: videoFile.duration;
-    }, {new: true})
+      thumbnail: thumbnailUrl,
+      title: title ?? isVideoExisted.title,
+      description: description ?? isVideoExisted.description,
+    },
+    { new: true }
+  );
 
-    if(!video) {
-        throw new apiError(404, "Video not found")
-    }
+  if (!video) {
+    throw new apiError(404, "Video not found");
+  }
 
-    res.status(200).json( new apiResponse(200, video, 'video updated successfully'));
-})
+  res
+    .status(200)
+    .json(new apiResponse(200, video, "video updated successfully"));
+});
 
 const deleteVideo = asyncHandler(async (req, res) => {
-    const { videoId } = req.params
-    //TODO: delete video
-})
+  const { videoId } = req.params;
+  //TODO: delete video
+});
 
 const togglePublishStatus = asyncHandler(async (req, res) => {
-    const { videoId } = req.params
-})
+  const { videoId } = req.params;
+});
 
 export {
-    getAllVideos,
-    publishAVideo,
-    getVideoById,
-    updateVideo,
-    deleteVideo,
-    togglePublishStatus
-}
+  getAllVideos,
+  publishAVideo,
+  getVideoById,
+  updateVideo,
+  deleteVideo,
+  togglePublishStatus,
+};
