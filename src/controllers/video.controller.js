@@ -154,8 +154,8 @@ const updateVideo = asyncHandler(async (req, res) => {
 
   const { title, description } = req.body;
 
-  if([title, description].some((field) => field?.trim() === "")) {
-    throw new apiError(404, 'title or description is required')
+  if ([title, description].some((field) => field?.trim() === "")) {
+    throw new apiError(404, "title or description is required");
   }
 
   if (!title && !description && !req.files?.thumbnail) {
@@ -205,6 +205,24 @@ const updateVideo = asyncHandler(async (req, res) => {
 const deleteVideo = asyncHandler(async (req, res) => {
   const { videoId } = req.params;
   //TODO: delete video
+
+  if (!videoId || !videoId.trim()) {
+    throw new ApiError(400, "videoId is required");
+  }
+
+  const isVideoExist = await Video.findById(videoId);
+  if (!isVideoExist) {
+    throw new apiError(404, 'Video not found');
+  }
+
+  const video = await Video.findByIdAndDelete(videoId);
+  if (!video) {
+    throw new apiError(404, "Video not found");
+  }
+
+  return res
+    .status(200)
+    .json(new apiResponse(200, video, "Video Deleted Successfully"));
 });
 
 const togglePublishStatus = asyncHandler(async (req, res) => {
