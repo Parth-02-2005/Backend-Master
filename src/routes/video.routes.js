@@ -1,7 +1,7 @@
 import express from "express";
 import upload from "../middlewares/multer.middleware.js";
 import { authenticateUser } from "../middlewares/auth.middleware.js";
-import { deleteVideo, getAllVideos, getVideoById, publishAVideo, updateVideo } from "../controllers/video.controller.js";
+import { deleteVideo, getAllVideos, getVideoById, publishAVideo, togglePublishStatus, updateVideo } from "../controllers/video.controller.js";
 
 const router = express.Router();
 
@@ -16,5 +16,5 @@ router.put("/update/:videoId",
     upload.fields([{ name: "thumbnail", maxCount: 1 }], 
     ), updateVideo);
 router.delete('/delete/:videoId', authenticateUser, deleteVideo);
-
+router.patch('/toggle-status/:videoId', authenticateUser, togglePublishStatus);
 export default router
