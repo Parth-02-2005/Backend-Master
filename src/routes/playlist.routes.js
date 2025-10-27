@@ -1,10 +1,11 @@
 import express from "express"
 import upload from "../middlewares/multer.middleware.js";
 import { authenticateUser } from "../middlewares/auth.middleware.js";
-import { createPlaylist } from "../controllers/playlist.controller";
+import { createPlaylist, getPlaylistById, getUserPlaylists } from "../controllers/playlist.controller";
 
 
 const router = express.Router()
 
 router.post('/playlist', authenticateUser, createPlaylist);
 router.get('/playlists/:userId', authenticateUser, getUserPlaylists);
+router.get('/playlist/:playlistId', authenticateUser, getPlaylistById);

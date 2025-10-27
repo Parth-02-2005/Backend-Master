@@ -1,5 +1,5 @@
 import mongoose, {isValidObjectId} from "mongoose"
-import {Playlist} from "../models/playlist.model.js"
+import PlayList, {Playlist} from "../models/playlist.model.js"
 import {asyncHandler} from "../utils/asyncHandler.js"
 import apiError from "../utils/apiError.js"
 import apiResponse from "../utils/apiResponse.js"
@@ -56,6 +56,16 @@ const getUserPlaylists = asyncHandler(async (req, res) => {
 const getPlaylistById = asyncHandler(async (req, res) => {
     const {playlistId} = req.params
     //TODO: get playlist by id
+    if(!playlistId || !playlistId.trim()) {
+        throw new apiError(400, 'Invalid playlist ID');
+    }
+    const playlist = await PlayList.findById(playlistId).populate('videos').populate('owner', 'username email');
+
+    if(!playlist) {
+        throw new apiError(404, 'playlist not found');
+    }
+
+    res.status(200).json(new apiResponse(200, playlist, 'Fetched playlist successfully'));
 })
 
 const addVideoToPlaylist = asyncHandler(async (req, res) => {
@@ -63,7 +73,7 @@ const addVideoToPlaylist = asyncHandler(async (req, res) => {
 })
 
 const removeVideoFromPlaylist = asyncHandler(async (req, res) => {
-    const {playlistId, videoId} = req.params
+    const { playlistId, videoId } = req.params
     // TODO: remove video from playlist
 
 })
