@@ -88,6 +88,7 @@ const addVideoToPlaylist = asyncHandler(async (req, res) => {
   if (!video) {
     throw new apiError(404, "Video not found");
   }
+
   // check if video already exists in playlist or not
   const videoInPlaylist = playlist.videos.some(
     (video) => video.toString() === videoId
@@ -124,6 +125,48 @@ const addVideoToPlaylist = asyncHandler(async (req, res) => {
 const removeVideoFromPlaylist = asyncHandler(async (req, res) => {
   const { playlistId, videoId } = req.params;
   // TODO: remove video from playlist
+
+  if (!playlistId || !videoId) {
+    throw new apiError(400, "Playlist ID and Video ID are required");
+  }
+
+  // find video in database
+  const video = await Video.findById(videoId);
+  const playlist = await PlayList.findById(playlistId);
+
+   if (!playlist) {
+    throw new apiError(404, "Playlist not found");
+  }
+
+  if (!video) {
+    throw new apiError(404, "Video not found");
+  }
+
+  // check if video already exists in playlist or not
+  const videoInPlaylist = playlist.videos.some(
+    (video) => video.toString() === videoId
+  );
+
+  if (!videoInPlaylist) {
+    throw new apiError(400, "Video not in playlist");
+  }
+
+  playlist.videos = playlist.videos.filter((video) => video._id.toString() !== videoId);
+
+  const updatedPlaylist = playlist.save();
+
+  if(!updatePlaylist) {
+    throw new apiError(400, 'Failed to remove video from playlist')
+  }
+  
+  // populate videos in playlist
+    const populatedPlaylist = await updatedPlaylist.populate("videos")
+    if(!populatedPlaylist){
+        throw new apiError(500, "Failed to populate videos in playlist")
+    }
+
+    res.status(200).json(new apiResponse(200, populatedPlaylist, 'Video removed from playlist successfully'));
+
 });
 
 const deletePlaylist = asyncHandler(async (req, res) => {
