@@ -1,7 +1,7 @@
 import express from "express"
 import upload from "../middlewares/multer.middleware.js";
 import { authenticateUser } from "../middlewares/auth.middleware.js";
-import { addVideoToPlaylist, createPlaylist, getPlaylistById, getUserPlaylists, removeVideoFromPlaylist } from "../controllers/playlist.controller";
+import { addVideoToPlaylist, createPlaylist, deletePlaylist, getPlaylistById, getUserPlaylists, removeVideoFromPlaylist } from "../controllers/playlist.controller";
 
 
 const router = express.Router()
@@ -15,3 +15,4 @@ router.post(
   addVideoToPlaylist
 );
 router.post('/playlist/:playlistId/remove-video/:videoId', authenticateUser, removeVideoFromPlaylist);
+router.delete('delete-playlist/:playlistId', authenticateUser, deletePlaylist);
