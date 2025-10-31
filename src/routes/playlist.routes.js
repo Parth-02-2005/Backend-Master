@@ -16,4 +16,4 @@ router.post(
 );
 router.post('/playlist/:playlistId/remove-video/:videoId', authenticateUser, removeVideoFromPlaylist);
 router.delete('delete-playlist/:playlistId', authenticateUser, deletePlaylist);
-router.put('/update-playlist/:playlistId', authenticateUser, updatePlaylist);
+router.put('/update-playlist/:playlistId', authenticateUser, updatePlaylist); f
