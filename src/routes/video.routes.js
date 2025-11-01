@@ -17,4 +17,4 @@ router.put("/update/:videoId",
     ), updateVideo);
 router.delete('/delete/:videoId', authenticateUser, deleteVideo);
 router.patch('/toggle-status/:videoId', authenticateUser, togglePublishStatus);
-export default router asd
+export default router 
